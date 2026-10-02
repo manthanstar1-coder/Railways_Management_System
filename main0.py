@@ -1,5 +1,6 @@
 import mysql.connector
 from tabulate import tabulate
+import day
 
 # ------------------ DATABASE CONNECTION ------------------
 mydb = mysql.connector.connect(
