@@ -1,13 +1,13 @@
 import mysql.connector
 from tabulate import tabulate
-import day
+
 
 # ------------------ DATABASE CONNECTION ------------------
 mydb = mysql.connector.connect(
     host="localhost",
     user="root",
     password="root",
-    database="Railways"
+    database="Railways2"
 )
 
 # IMPORTANT: buffered cursor to avoid unread result error

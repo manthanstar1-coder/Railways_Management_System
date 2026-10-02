@@ -1,5 +1,5 @@
 import mysql.connector as my
-import tabulate as tb
+from tabulate import tabulate as tb
 import datetime as dt
 import bcrypt
 
@@ -38,10 +38,13 @@ CREATE TABLE IF NOT EXISTS Trains(
     TrainName VARCHAR(50),
     Source VARCHAR(40),
     Destination VARCHAR(40),
-    Coaches INT(2),
-    Seats INT,
+    Coaches INT,
+    TotalSeats INT,
+    AvlSeats INT,
     Price INT,
-    IsActive INT DEFAULT 1 
+    TotalRevenue float,
+    IsActive INT
+    
 )
 """)
 mycursor.execute("""
@@ -55,7 +58,7 @@ CREATE TABLE IF NOT EXISTS Tickets(
     PMobile char(10),
     PGender varchar(6),
     SeatNo varchar(5),
-    BookingData DATE,
+    BookingDate DATE,
     PaidAmount float,
     FOREIGN KEY (TrainNo) REFERENCES Trains(TrainNo) ON DELETE SET NULL,
     FOREIGN KEY (Email) REFERENCES Users(Email) ON DELETE SET NULL
@@ -64,8 +67,18 @@ CREATE TABLE IF NOT EXISTS Tickets(
 """)
 mydb.commit()
 
+def show_table(cursor):
+    rows = cursor.fetchall()
+    if not rows:
+        print("No records found.")
+        return
 
-class userInfo:
+    columns = [col[0] for col in cursor.description]
+    print(tb(rows, headers=columns, tablefmt="grid"))
+    
+
+
+class getInfo:
     def name(self):
         Name = input("Enter Name: ")
         return Name
@@ -120,12 +133,41 @@ class userInfo:
     def doj(self):
         td = dt.date.today().strftime('%Y-%m-%d')
         return td
+    
+    def trainNo(self):
+        tno = int(input("Train Number: "))
+        return tno
+
+    def trainName(self):
+        name = input("Train Name: ")
+        return name
+
+    def trainSrc(self):
+        src = input("Source: ")
+        return src
+
+    def trainDst(self):
+        dst = input("Destination: ")
+        return dst
+
+    def trainCoaches(self):
+        Coaches = int(input("Coaches: "))
+        return Coaches
+
+    def trainSeats(self):
+        seats = int(input("Seats: "))
+        return seats
+
+    def ticketPrice(self):
+        price = int(input("Price: "))
+        return price
+    
+    
 
 class Railways:
     
-    
     def signup(self):
-        data = userInfo()
+        data = getInfo()
         
         try:
             mycursor.execute("INSERT INTO users VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (data.email(), data.name(), data.dob(), data.age(), data.mobile(), data.gender(), data.passWd(), "User", None, None, data.doj()))
@@ -141,38 +183,74 @@ class Railways:
             E = input("Enter Email: ")
             P = input("Enter Pass: ")
             
-            query = mycursor.execute(("select Email, Pass, Type, Name from users where Email = %s"),(E,))
+            mycursor.execute(("select Email, Pass, Type, Name from users where Email = %s"),(E,))
             person = mycursor.fetchone() 
             
-            if person is not None and bcrypt.checkpw(P.encode('utf-8'),person[1].encode('utf8')) and person[2] == "User":
+            if person and bcrypt.checkpw(P.encode('utf-8'),person[1].encode('utf8')) and person[2] == "User":
                 print(f"Welcome, {person[3]}")
                 board.userDashboard()
                 print("Thank you for using our program.")
                 return
             
-            if person is not None and bcrypt.checkpw(P.encode('utf-8'),person[1].encode('utf8')) and person[2] == "staff":
-                pass
+            elif person and bcrypt.checkpw(P.encode('utf-8'),person[1].encode('utf8')) and person[2] == "staff":
+                print(f"Welcome, {person[3]}")
+                board.staffdashboard()
+                print("Thank you for using our program.")
+                return
+            
+            elif person and bcrypt.checkpw(P.encode('utf-8'),person[1].encode('utf-8')) and person[2] == 'admin':
+                print(f"Welcome, {person[3]}")
+                board.adminDashboard()
+                print("Thank you for using our program.")
+                return
                 
             else: 
                 print("Incorrect Credentials / User Doesn't exist.")
-            
-    def searchTrain():
-
-        print("1: By Train No\n2: By Source \n3: By Destination")
-        s = int(input("Choose: "))
-
-        if s == 1:
-            tno = int(input("Train No: "))
-            mycursor.execute("SELECT * FROM Trains WHERE TrainNo=%s", (tno,))
-            
-        elif s == 2:
-            src = input("Source: ")
-            mycursor.execute("SELECT * FROM Trains WHERE Source=%s", (src,))
-            
-        elif s == 3:
-            dst = input("Destination: ")
-            mycursor.execute("SELECT * FROM Trains WHERE Destination=%s", (dst,))
                 
+                
+    def addTrain(self):
+        
+        data = getInfo()
+        tnum = data.trainNo()
+        
+        mycursor.execute(("SELECT * FROM Trains WHERE TrainNo=%s"), (tnum,))
+        if mycursor.fetchone():
+            print("TRAIN ALREADY EXISTS!")
+        
+        else:
+            mycursor.execute("INSERT INTO Trains VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",(tnum, data.trainName(), data.trainSrc(), data.trainDst(), data.trainCoaches(), data.trainSeats(), data.ticketPrice(), 1))
+            mydb.commit()
+            print("TRAIN ADDED SUCCESSFULLY!")
+            
+        return
+    
+            
+    def searchTrain(self):
+
+        while 1:
+            print("1: By Train No\n2: By Source \n3: By Destination\n0: Exit")
+        
+            s = int(input("Choose: "))
+
+            if s == 1:
+                tno = int(input("Train No: "))
+                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, Seats, Price FROM Trains WHERE TrainNo = %s"), (tno,))
+                
+                
+            elif s == 2:
+                src = input("Source: ")
+                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, Seats, Price FROM Trains WHERE Source = %s"), (src,))
+                
+            elif s == 3:
+                dst = input("Destination: ")
+                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, Seats, Price FROM Trains WHERE Destination = %s"), (dst,))
+
+            
+            else:
+                print("Invalid Input")
+                
+            show_table(mycursor)
+            return
                 
             
 class Dashboards:
@@ -186,8 +264,7 @@ class Dashboards:
                 return
 
             elif choice == 1:
-                # user.train(tra)
-                pass
+                user.searchTrain()
                 
             elif choice == 2:
                 pass
@@ -197,7 +274,51 @@ class Dashboards:
                 
             elif choice == 4:
                 pass
+            
+            else:
+                print("Invalid Input")
+                
+            
+    def staffdashboard(self):    
+        print("1: Add Train\n2: Remove Train\n3: Search Train\n4: Ticket Booking / Records\n5: Available Trains List\n6: Logout")
+        choice = int(input("Choose: "))
+        
+        if choice == 6:
+            return
+        
+        elif choice == 1:
+            user.addTrain()
+            pass
+            
+        elif choice == 2:
+            pass
+            
+        elif choice == 3:
+            user.searchTrain()
+            
+        elif choice == 4:
+            pass
+    
+    
+    def adminDashboard(self):
+        print("1: Add Train\n2: Remove Train\n3: Search Train\n4: Staff Management\n5: Ticket Booking / Records\n6: Available Trains List\n7: Total Revenue\n8: Logout")
+        choice = int(input("Choose: "))
 
+        if choice == 8:
+            return
+
+        elif choice == 1:
+            user.addTrain()
+            
+        elif choice == 2:
+            user.removetrain()
+            
+        elif choice == 3:
+            user.searchTrain()
+            return
+            
+        elif choice == 4:
+            pass
        
 
 user = Railways()
