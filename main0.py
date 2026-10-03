@@ -7,7 +7,6 @@ mydb = mysql.connector.connect(
     host="localhost",
     user="root",
     password="root",
-    database="Railways2"
 )
 
 # IMPORTANT: buffered cursor to avoid unread result error

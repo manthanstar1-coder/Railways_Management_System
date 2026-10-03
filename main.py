@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS Tickets(
     BookingDate DATE,
     PaidAmount float,
     FOREIGN KEY (TrainNo) REFERENCES Trains(TrainNo) ON DELETE SET NULL,
-    FOREIGN KEY (Email) REFERENCES Users(Email) ON DELETE SET NULL
+    FOREIGN KEY (Email) REFERENCES users(Email) ON DELETE SET NULL
 ) 
 """)
 mycursor.execute("""
