@@ -40,10 +40,8 @@ CREATE TABLE IF NOT EXISTS Trains(
     Destination VARCHAR(40),
     Coaches INT,
     TotalSeats INT,
-    AvlSeats INT,
     Price INT,
-    TotalRevenue float,
-    IsActive INT
+    IsActive INT 
     
 )
 """)
@@ -54,16 +52,44 @@ CREATE TABLE IF NOT EXISTS Tickets(
     TrainNo INT,
     PName varchar(50),
     PAge int(3),
-    PEmail varchar(50),
     PMobile char(10),
     PGender varchar(6),
-    SeatNo varchar(5),
+    BookedSeats INT,
+
+    BoardingStation varchar(40),
+    DestinationStation varchar(40),
+
+    SeatNo varchar(20),
     BookingDate DATE,
     PaidAmount float,
     FOREIGN KEY (TrainNo) REFERENCES Trains(TrainNo) ON DELETE SET NULL,
     FOREIGN KEY (Email) REFERENCES Users(Email) ON DELETE SET NULL
-
 ) 
+""")
+mycursor.execute("""
+CREATE TABLE IF NOT EXISTS Route(
+    RouteID INT AUTO_INCREMENT PRIMARY KEY,
+    TrainNo INT,
+    StationName VARCHAR(50),
+    StopNo INT,
+    ArrivalTime TIME,
+    DepartureTime TIME,
+
+    FOREIGN KEY (TrainNo) REFERENCES Trains(TrainNo) ON DELETE SET NULL
+)
+""")
+mycursor.execute("""
+CREATE TABLE IF NOT EXISTS Fare(
+    FareID INT AUTO_INCREMENT PRIMARY KEY,
+    TrainNo INT,
+    FromStation VARCHAR(50),
+    ToStation VARCHAR(50),
+    FareAmount FLOAT,
+
+    FOREIGN KEY (TrainNo)
+    REFERENCES Trains(TrainNo)
+    ON DELETE SET NULL
+)
 """)
 mydb.commit()
 
@@ -75,7 +101,7 @@ def show_table(cursor):
 
     columns = [col[0] for col in cursor.description]
     print(tb(rows, headers=columns, tablefmt="grid"))
-    
+    return rows
 
 
 class getInfo:
@@ -161,7 +187,17 @@ class getInfo:
     def ticketPrice(self):
         price = int(input("Price: "))
         return price
-    
+    def avlseats(self,trainNo):
+      
+
+        mycursor.execute("SELECT TotalSeats FROM Trains WHERE TrainNo=%s",(trainNo,))
+        total = mycursor.fetchone()[0]
+
+        mycursor.execute(("SELECT COALESCE(SUM(BookedSeats),0) FROM Tickets WHERE TrainNo=%s"),(trainNo,))
+
+        booked = mycursor.fetchone()[0]
+
+        return (total - booked)
     
 
 class Railways:
@@ -210,7 +246,7 @@ class Railways:
                 
     def addTrain(self):
         
-        data = getInfo()
+        
         tnum = data.trainNo()
         
         mycursor.execute(("SELECT * FROM Trains WHERE TrainNo=%s"), (tnum,))
@@ -234,25 +270,41 @@ class Railways:
 
             if s == 1:
                 tno = int(input("Train No: "))
-                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, Seats, Price FROM Trains WHERE TrainNo = %s"), (tno,))
+                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, TotalSeats, Price FROM Trains WHERE TrainNo = %s and isactive = 1"), (tno,))
                 
                 
             elif s == 2:
                 src = input("Source: ")
-                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, Seats, Price FROM Trains WHERE Source = %s"), (src,))
+                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, TotalSeats, Price FROM Trains WHERE Source = %s and isactive = 1"), (src,))
                 
             elif s == 3:
                 dst = input("Destination: ")
-                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, Seats, Price FROM Trains WHERE Destination = %s"), (dst,))
+                mycursor.execute(("SELECT TrainNo, TrainName, Source, Destination, Coaches, TotalSeats, Price FROM Trains WHERE Destination = %s and isactive = 1"), (dst,))
 
             
             else:
                 print("Invalid Input")
                 
-            show_table(mycursor)
-            return
+            rows = mycursor.fetchall()
+
+            if not rows:
+                print("No records found.")
+                return
+
+           
+            elif rows:
+                new_rows = []
+                columns = [col[0] for col in mycursor.description]
+                columns.append("Available Seats")
+                for row in rows:
+                    
+                    row = list(row)
+                    row.append(data.avlseats(row[0]))   # row[0] = TrainNo
+                    new_rows.append(row)
                 
-            
+                print(tb(new_rows, headers=columns, tablefmt="grid"))
+                return
+
 class Dashboards:
     def userDashboard(self):
         while 1:
@@ -320,7 +372,7 @@ class Dashboards:
         elif choice == 4:
             pass
        
-
+data = getInfo()
 user = Railways()
 board = Dashboards()
     
